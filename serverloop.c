@@ -46,7 +46,7 @@
 #endif
 
 #include <netinet/in.h>
-
+#include <math.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -55,7 +55,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <stdarg.h>
-
+#include <time.h>
 #include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "packet.h"
@@ -107,6 +107,13 @@ static int connection_out;	/* Connection to client (output). */
 static int connection_closed = 0;	/* Connection to client closed. */
 static u_int buffer_high;	/* "Soft" max buffer size. */
 static int no_more_sessions = 0; /* Disallow further sessions. */
+
+
+////////////////////////////
+
+int time_in_milli = 2000;	
+
+////////////////////////////
 
 /*
  * This SIGCHLD kludge is used to detect when the child exits.  The server
@@ -275,7 +282,7 @@ client_alive_check(void)
  * have data or can accept data.  Optionally, a maximum time can be specified
  * for the duration of the wait (0 = infinite).
  */
-static void
+static int
 wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
     u_int *nallocp, u_int max_time_milliseconds)
 {
@@ -359,8 +366,42 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	}
 
 	/* Wait for something to happen, or the timeout to expire. */
+	
+	///////////////////////////////////////////////
+	
+	if(max_time_milliseconds == time_in_milli)
+	{
+		
+		//
+		//  Clear the writesetp descriptor set whenever time remaining equals time_in_milli
+		//
+		
+		FD_CLR(connection_out, *writesetp);
+	}
+	
+	
+	time_t tv1;
+	time(&tv1);
+	
+	///////////////////////////////////////////////
+	
 	ret = select((*maxfdp)+1, *readsetp, *writesetp, NULL, tvp);
+	
+	///////////////////////////////////////////////
+	
+	time_t tv2;
+	time(&tv2);
+	
+	//
+	// Modify the time remaining before the next write.
+	//
+	
+	double diff = difftime(tv2, tv1);
+	max_time_milliseconds = max_time_milliseconds - (diff)*1000;
+	debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! DEBUG %d !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", diff);
 
+	////////////////////
+	
 	if (ret == -1) {
 		memset(*readsetp, 0, *nallocp);
 		memset(*writesetp, 0, *nallocp);
@@ -378,6 +419,12 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	}
 
 	notify_done(*readsetp);
+	
+	////////////////////////////
+	
+	return max_time_milliseconds;
+	
+	/////////////////////////////
 }
 
 /*
@@ -713,21 +760,6 @@ server_loop(pid_t pid, int fdin_arg, int fdout_arg, int fderr_arg)
 		/* Process input from the client and from program stdout/stderr. */
 		process_input(readset);
 		
-		/****************************************************
-		*	CSE508 - Traffic analysis
-		*****************************************************/
-		
-		u_int len_buf = buffer_len(&stdout_buffer);
-		
-		if(len_buf != 0 && len_buf < 256) {
-			u_int pad = 256-len_buf;
-			packet_send_ignore(pad);
-		}
-		
-		/*****************************************************
-		*	END - CSE508									 *
-		*****************************************************/
-		
 		/* Process output to the client and to program stdin. */
 		process_output(writeset);
 	}
@@ -835,6 +867,17 @@ server_loop2(Authctxt *authctxt)
 {
 	fd_set *readset = NULL, *writeset = NULL;
 	int rekeying = 0, max_fd, nalloc = 0;
+	
+	////////////////////////////
+		
+	//
+	// time_in_milli is a global variable. We have to perform writes every time_in_milli ms.
+	// time_rem contains the time in ms reminaing before the next write call.
+	//
+	
+	int time_rem = time_in_milli;
+	
+	///////////////////////////
 
 	debug("Entering interactive session for SSH2.");
 
@@ -857,14 +900,25 @@ server_loop2(Authctxt *authctxt)
 	server_init_dispatch();
 
 	for (;;) {
+		
 		process_buffered_input_packets();
 
 		rekeying = (xxx_kex != NULL && !xxx_kex->done);
 
 		if (!rekeying && packet_not_very_much_data_to_write())
 			channel_output_poll();
-		wait_until_can_do_something(&readset, &writeset, &max_fd,
-		    &nalloc, 0);
+		/* wait_until_can_do_something(&readset, &writeset, &max_fd,
+		    &nalloc, 0); */
+
+			///////////////////////////////////////////////
+			
+			
+			time_rem = wait_until_can_do_something(&readset, &writeset, &max_fd,
+		    &nalloc, time_rem);
+			
+			////////////////////////////////////////////////
+			
+		   debug(" ------------------$$$$$ Time Reamining %d $$$$$------------------- ", time_rem);
 
 		if (received_sigterm) {
 			logit("Exiting on signal %d", received_sigterm);
@@ -884,8 +938,24 @@ server_loop2(Authctxt *authctxt)
 		process_input(readset);
 		if (connection_closed)
 			break;
-		process_output(writeset);
+			
+		/////////////////////////////////////////	
+			
+		if(time_rem == 0)
+		{	
+			//
+			// Time to write. Reset the time remaining (time_rem) to the time_in_milli.
+			//
+			
+			FD_SET(connection_out,writeset);
+			process_output(writeset);
+			time_rem = time_in_milli;
+			debug("&&&&&&&& IN HERE &&&&&&&&&");
+		}
+		
+		/////////////////////////////////////////
 	}
+
 	collect_children();
 
 	if (readset)
