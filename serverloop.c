@@ -356,7 +356,7 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	   FD_SET(connection_out, *writesetp);
 
 	 */
-	if(now > next_write) {
+	if(now >= next_write) {
 
 		FD_SET(connection_out, *writesetp);
 		max_time_milliseconds = 0;
@@ -367,7 +367,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		max_time_milliseconds = (next_write == INT_MAX) ? 0 : (next_write - (now));
 	}
 	
-	debug("&&&&&&&&&&& max_timeout %d", max_time_milliseconds);
 	/*
 	 * If child has terminated and there is enough buffer space to read
 	 * from it, then read as much as is available and exit.
@@ -380,7 +379,8 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		tvp = NULL;
 	else {
 		tv.tv_sec = max_time_milliseconds / 1000;
-		tv.tv_usec = 1000 * (max_time_milliseconds % 1000);
+		// CSE 508 . Changed 1000 to 5, to get a small timeout value.
+		tv.tv_usec = 5 * (max_time_milliseconds % 1000);
 		tvp = &tv;
 	}
 
@@ -407,7 +407,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		}
 	}
 	
-	debug("-------------------------RETURN VALUE %d", ret);
 	notify_done(*readsetp);
 
 }
@@ -927,13 +926,12 @@ server_loop2(Authctxt *authctxt)
 
 			if(next_write == INT_MAX) {
 				srand(time(NULL));
-				next_write =  (now) + 15;
+				next_write =  (now) + 2;
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
 
 			last_real_data = now;
-			debug("&&&&&&&&&&&&&& NEXT WRITE in READ: %u  NOW %d", next_write, now);
 			}
 
 		process_input(readset);
@@ -944,12 +942,11 @@ server_loop2(Authctxt *authctxt)
 
 		/////////////////////////////////////////	
 		if(FD_ISSET(connection_out, writeset)) {
-			debug("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&REACHED HERE");	
 			time_t now;
 		 	time(&now);
 
 			srand(time(NULL));
-			next_write =  (now) + 15;
+			next_write =  (now) + 2;
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 
