@@ -533,8 +533,11 @@ process_output(fd_set *writeset)
 		}
 	}
 	/* Send any buffered packet data to the client. */
-	if (FD_ISSET(connection_out, writeset))
-		packet_write_poll();
+	if (FD_ISSET(connection_out, writeset)) {
+
+			packet_write_poll();
+
+	}
 }
 
 /*
@@ -940,7 +943,6 @@ server_loop2(Authctxt *authctxt)
 		if (connection_closed)
 			break;
 
-		/////////////////////////////////////////	
 		if(FD_ISSET(connection_out, writeset)) {
 			time_t now;
 		 	time(&now);

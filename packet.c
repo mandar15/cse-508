@@ -86,6 +86,7 @@
 #endif
 
 #define PACKET_MAX_SIZE (256 * 1024)
+#define MAX_MSS 1200
 
 struct packet_state {
 	u_int32_t seqnr;
@@ -1652,17 +1653,33 @@ packet_disconnect(const char *fmt,...)
 }
 
 /* Checks if there is any buffered output, and tries to write some of the output. */
-
+/* CSE 508 - Modifying how packets are written to the client. Fixed length */
 void
 packet_write_poll(void)
 {
 	int len = buffer_len(&active_state->output);
 	int cont;
 
-	if (len > 0) {
+	if (len >= 0) {
 		cont = 0;
-		len = roaming_write(active_state->connection_out,
-		    buffer_ptr(&active_state->output), len, &cont);
+		if(len > MAX_MSS)
+		{ 
+			len = roaming_write(active_state->connection_out,
+		    		buffer_ptr(&active_state->output), MAX_MSS, &cont);
+		}
+		else
+		{
+			if(len > 0) {
+				len = roaming_write(active_state->connection_out,
+		    		buffer_ptr(&active_state->output), len, &cont);
+			}
+
+			packet_send_ignore(MAX_MSS-len);
+			packet_send();
+			len = roaming_write(active_state->connection_out,
+				buffer_ptr(&active_state->output), MAX_MSS-len, &cont);				
+		}
+
 		if (len == -1) {
 			if (errno == EINTR || errno == EAGAIN ||
 			    errno == EWOULDBLOCK)
@@ -1673,6 +1690,7 @@ packet_write_poll(void)
 			fatal("Write connection closed");
 		buffer_consume(&active_state->output, len);
 	}
+	
 }
 
 /*
