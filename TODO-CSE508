@@ -3,7 +3,7 @@
 
 1. Timing according to algo.
 2. Appending junk data ( packet_send_ignore(len) )
-3. Write at most {MAX_MSS} bytes. <- process_output modification.
+3. Write at most {MAX_MSS} bytes. <- process_output modification. FIXME:// output_drain does not follow the conventions of fixed packet length.
 4. Stop on idle. State machine implementation as discussed.
 5. 2^k - constant sized packets in a session.
 
