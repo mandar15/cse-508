@@ -535,7 +535,7 @@ process_output(fd_set *writeset)
 	/* Send any buffered packet data to the client. */
 	if (FD_ISSET(connection_out, writeset)) {
 
-			packet_write_poll();
+			packet_write_poll2();
 
 	}
 }
