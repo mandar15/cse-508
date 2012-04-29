@@ -86,7 +86,7 @@
 #endif
 
 #define PACKET_MAX_SIZE (256 * 1024)
-#define MAX_MSS 1500
+#define MAX_MSS 1200
 
 struct packet_state {
 	u_int32_t seqnr;
@@ -1693,16 +1693,13 @@ packet_write_poll2(void)
 		}
 		else
 		{
-			if(len > 0) {
-				len = roaming_write(active_state->connection_out,
-		    		buffer_ptr(&active_state->output), len, &cont);	
-				buffer_consume(&active_state->output, len);
-			}
-
-			packet_send_ignore(MAX_MSS-len);
+			debug("&&&&&&&&&&&& BEFORE LEN %d %d",buffer_len(&active_state->output), len);
+			
+			packet_send_ignore(MAX_MSS-len-32);
 			packet_send();
+			debug("&&&&&&&&&&&& LEN %d %d",buffer_len(&active_state->output), len);
 			len = roaming_write(active_state->connection_out,
-				buffer_ptr(&active_state->output), MAX_MSS-len, &cont);				
+				buffer_ptr(&active_state->output), MAX_MSS, &cont);				
 		}
 
 		if (len == -1) {
