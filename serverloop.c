@@ -357,11 +357,9 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 
 	 */
 	
-	debug("*******************[%u]  [%u]  [%u]  [%u] *********************", now.tv_sec, now.tv_usec, next_write.tv_sec, next_write.tv_usec);
 
 	if(now.tv_sec > next_write.tv_sec || (now.tv_sec == next_write.tv_sec && now.tv_usec >= next_write.tv_usec)) {
 
-		debug("--------WRITE FDSET SET---------");
 		FD_SET(connection_out, *writesetp);
 		max_time_milliseconds = 0;
 	}
@@ -371,7 +369,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec));
 	}
 	
-	debug("!!!!!!!!!!!!!!!!! [%u] !!!!!!!!!!!!!!!!!!", max_time_milliseconds);
 	/*
 	 * If child has terminated and there is enough buffer space to read
 	 * from it, then read as much as is available and exit.
@@ -540,7 +537,7 @@ process_output(fd_set *writeset)
 	/* Send any buffered packet data to the client. */
 	if (FD_ISSET(connection_out, writeset)) {
 
-			packet_write_poll2();
+		packet_write_poll2();
 
 	}
 }
@@ -891,8 +888,9 @@ server_loop2(Authctxt *authctxt)
 
 	server_init_dispatch();
 
-//	u_int last_real_data;
-
+	struct timeval last_real_data;
+	last_real_data.tv_sec = INT_MAX;
+	last_real_data.tv_usec = INT_MAX;
 	next_write.tv_sec = INT_MAX;
 	next_write.tv_usec = INT_MAX;
 
@@ -931,8 +929,9 @@ server_loop2(Authctxt *authctxt)
 			}
 		}
 
+		struct timeval now;
+
 		if(FD_ISSET(connection_in, readset)) {		
-			struct timeval now;
 			gettimeofday(&now, NULL);
 
 			if(next_write.tv_sec == INT_MAX) {
@@ -943,7 +942,7 @@ server_loop2(Authctxt *authctxt)
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
 
-//			last_real_data = now;
+			last_real_data.tv_sec = now.tv_sec;
 			}
 
 		process_input(readset);
@@ -953,7 +952,6 @@ server_loop2(Authctxt *authctxt)
 			break;
 
 		if(FD_ISSET(connection_out, writeset)) {
-			struct timeval now;
 		 	gettimeofday(&now, NULL);
 
 			srand(time(NULL));
@@ -962,11 +960,16 @@ server_loop2(Authctxt *authctxt)
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 
-			//last_real_data = now;
+			//last_real_data.tv_sec = now.tv_sec;
 
 		}
 
 			process_output(writeset);
+
+		if((now.tv_sec - last_real_data.tv_sec) > 2)
+		{
+			next_write.tv_sec = INT_MAX;
+		}
 	}
 
 	collect_children();

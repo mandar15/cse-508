@@ -1684,6 +1684,8 @@ packet_write_poll2(void)
 {
 	int len = buffer_len(&active_state->output);
 	int cont;
+	u_int write_bytes = MAX_MSS;
+	
 	if (len >= 0) {
 		cont = 0;
 		if(len > MAX_MSS)
@@ -1693,13 +1695,18 @@ packet_write_poll2(void)
 		}
 		else
 		{
-			debug("&&&&&&&&&&&& BEFORE LEN %d %d",buffer_len(&active_state->output), len);
-			
-			packet_send_ignore(MAX_MSS-len-32);
-			packet_send();
-			debug("&&&&&&&&&&&& LEN %d %d",buffer_len(&active_state->output), len);
+
+			if(MAX_MSS - len > 32)
+			{
+				packet_send_ignore(MAX_MSS-len-32);
+				packet_send();
+								
+			}
+			else
+				write_bytes = MAX_MSS-len;
+
 			len = roaming_write(active_state->connection_out,
-				buffer_ptr(&active_state->output), MAX_MSS, &cont);				
+				buffer_ptr(&active_state->output), write_bytes, &cont);				
 		}
 
 		if (len == -1) {
