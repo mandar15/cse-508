@@ -368,7 +368,7 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	else 
 	{
 		FD_CLR(connection_out, *writesetp);
-		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec)/1000);
+		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec));
 	}
 	
 	debug("!!!!!!!!!!!!!!!!! [%u] !!!!!!!!!!!!!!!!!!", max_time_milliseconds);
@@ -383,9 +383,9 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	if (max_time_milliseconds == 0)
 		tvp = NULL;
 	else {
-		tv.tv_sec = max_time_milliseconds / 1000;
+		tv.tv_sec = (next_write.tv_sec - now.tv_sec);
 		// CSE 508 . Changed 1000 to 5, to get a small timeout value.
-		tv.tv_usec = (max_time_milliseconds % 1000);
+		tv.tv_usec = (next_write.tv_usec - now.tv_usec);
 		tvp = &tv;
 	}
 
@@ -938,7 +938,7 @@ server_loop2(Authctxt *authctxt)
 			if(next_write.tv_sec == INT_MAX) {
 				srand(time(NULL));
 				next_write.tv_sec =  now.tv_sec;
-				next_write.tv_usec = now.tv_usec + 2000;
+				next_write.tv_usec = now.tv_usec + 20000;
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
@@ -958,7 +958,7 @@ server_loop2(Authctxt *authctxt)
 
 			srand(time(NULL));
 			next_write.tv_sec = now.tv_sec;
-			next_write.tv_usec =  now.tv_usec + 2000;
+			next_write.tv_usec =  now.tv_usec + 20000;
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 
