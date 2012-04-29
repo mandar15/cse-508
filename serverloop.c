@@ -111,7 +111,7 @@ static int no_more_sessions = 0; /* Disallow further sessions. */
 
 ////////////////////////////
 
-static u_int next_write  = INT_MAX;
+struct timeval next_write;
 
 ////////////////////////////
 
@@ -344,8 +344,8 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 
 	// CSE 508
 
-	time_t now;
-	time(&now);
+	struct timeval now;
+	gettimeofday(&now, NULL);
 
 	/*
 	 * If we have buffered packet data going to the client, mark that
@@ -356,17 +356,22 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	   FD_SET(connection_out, *writesetp);
 
 	 */
-	if(now >= next_write) {
+	
+	debug("*******************[%u]  [%u]  [%u]  [%u] *********************", now.tv_sec, now.tv_usec, next_write.tv_sec, next_write.tv_usec);
 
+	if(now.tv_sec > next_write.tv_sec || (now.tv_sec == next_write.tv_sec && now.tv_usec >= next_write.tv_usec)) {
+
+		debug("--------WRITE FDSET SET---------");
 		FD_SET(connection_out, *writesetp);
 		max_time_milliseconds = 0;
 	}
 	else 
 	{
 		FD_CLR(connection_out, *writesetp);
-		max_time_milliseconds = (next_write == INT_MAX) ? 0 : (next_write - (now));
+		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec)/1000);
 	}
 	
+	debug("!!!!!!!!!!!!!!!!! [%u] !!!!!!!!!!!!!!!!!!", max_time_milliseconds);
 	/*
 	 * If child has terminated and there is enough buffer space to read
 	 * from it, then read as much as is available and exit.
@@ -380,7 +385,7 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	else {
 		tv.tv_sec = max_time_milliseconds / 1000;
 		// CSE 508 . Changed 1000 to 5, to get a small timeout value.
-		tv.tv_usec = 5 * (max_time_milliseconds % 1000);
+		tv.tv_usec = (max_time_milliseconds % 1000);
 		tvp = &tv;
 	}
 
@@ -862,7 +867,7 @@ server_loop2(Authctxt *authctxt)
 	// time_rem contains the time in ms reminaing before the next write call.
 	//
 
-	u_int time_rem = next_write;
+//	u_int time_rem = next_write;
 
 	///////////////////////////
 
@@ -886,7 +891,10 @@ server_loop2(Authctxt *authctxt)
 
 	server_init_dispatch();
 
-	u_int last_real_data;
+//	u_int last_real_data;
+
+	next_write.tv_sec = INT_MAX;
+	next_write.tv_usec = INT_MAX;
 
 	for (;;) {
 
@@ -924,17 +932,18 @@ server_loop2(Authctxt *authctxt)
 		}
 
 		if(FD_ISSET(connection_in, readset)) {		
-			time_t now;
-			time(&now);
+			struct timeval now;
+			gettimeofday(&now, NULL);
 
-			if(next_write == INT_MAX) {
+			if(next_write.tv_sec == INT_MAX) {
 				srand(time(NULL));
-				next_write =  (now) + 2;
+				next_write.tv_sec =  now.tv_sec;
+				next_write.tv_usec = now.tv_usec + 2000;
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
 
-			last_real_data = now;
+//			last_real_data = now;
 			}
 
 		process_input(readset);
@@ -944,15 +953,16 @@ server_loop2(Authctxt *authctxt)
 			break;
 
 		if(FD_ISSET(connection_out, writeset)) {
-			time_t now;
-		 	time(&now);
+			struct timeval now;
+		 	gettimeofday(&now, NULL);
 
 			srand(time(NULL));
-			next_write =  (now) + 2;
+			next_write.tv_sec = now.tv_sec;
+			next_write.tv_usec =  now.tv_usec + 2000;
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 
-			last_real_data = now;
+			//last_real_data = now;
 
 		}
 
