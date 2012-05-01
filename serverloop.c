@@ -937,12 +937,15 @@ server_loop2(Authctxt *authctxt)
 			if(next_write.tv_sec == INT_MAX) {
 				srand(time(NULL));
 				next_write.tv_sec =  now.tv_sec;
-				next_write.tv_usec = now.tv_usec + 20000;
+				next_write.tv_usec = now.tv_usec + 2000;
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
-
-			last_real_data.tv_sec = now.tv_sec;
+			u_char type;
+			if((type = packet_size_cse508()) != SSH2_MSG_IGNORE) {
+				last_real_data.tv_sec = now.tv_sec;
+				debug("$$$$$$$$$$ INSIDE LAST $");
+			}
 			}
 
 		process_input(readset);
@@ -956,7 +959,7 @@ server_loop2(Authctxt *authctxt)
 
 			srand(time(NULL));
 			next_write.tv_sec = now.tv_sec;
-			next_write.tv_usec =  now.tv_usec + 20000;
+			next_write.tv_usec =  now.tv_usec + 2000;
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 

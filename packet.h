@@ -123,5 +123,5 @@ void	 packet_restore_state(void);
 
 void	*packet_get_input(void);
 void	*packet_get_output(void);
-
+int	packet_size_508(void);
 #endif				/* PACKET_H */

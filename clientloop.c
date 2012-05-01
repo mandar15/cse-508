@@ -167,6 +167,11 @@ int	session_ident = -1;
 
 int	session_resumed = 0;
 
+/* CSE 508 */
+struct timeval next_write;
+
+/* END CSE 508 */
+
 /* Track escape per proto2 channel */
 struct escape_filter_ctx {
 	int escape_pending;
@@ -599,9 +604,13 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		}
 	}
 
+	/* CSE 508 */
+
 	/* Select server connection if have data to write to the server. */
-	if (packet_have_data_to_write())
-		FD_SET(connection_out, *writesetp);
+//	if (packet_have_data_to_write())
+//		FD_SET(connection_out, *writesetp);
+	struct timeval now;
+	gettimeofday(&now, NULL);
 
 	/*
 	 * Wait for something to happen.  This will suspend the process until
@@ -619,11 +628,51 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		if (timeout_secs < 0)
 			timeout_secs = 0;
 	}
+	
+	if(now.tv_sec > next_write.tv_sec || (now.tv_sec == next_write.tv_sec && now.tv_usec >= next_write.tv_usec)) {
+		
+		FD_SET(connection_out, *writesetp);
+		timeout_secs = INT_MAX;
+	}
+	else 
+	{
+		if(next_write.tv_sec == INT_MAX)
+		{
+		
+			if(packet_have_data_to_write()) {
+				FD_SET(connection_out, *writesetp);
+			
+			debug("NEVER REACHED %d", next_write.tv_sec);
+			}
+			timeout_secs = 0;
+		}
+		else	
+		{
+			FD_CLR(connection_out, *writesetp);
+			timeout_secs = 0;
+			debug("&*&*&*&*&*&*&*&*&*&*&");
+		}		
+	//	timeout_secs = (next_write.tv_sec == INT_MAX) ? INT_MAX : 0;
+	}
+	
 	if (timeout_secs == INT_MAX)
 		tvp = NULL;
 	else {
-		tv.tv_sec = timeout_secs;
-		tv.tv_usec = 0;
+		// CSE 508
+		//tv.tv_sec = timeout_secs;
+		//tv.tv_usec = 0;
+		if(next_write.tv_sec == INT_MAX)
+		{
+			tv.tv_sec = 0;
+			tv.tv_usec = 0;
+			if(packet_have_data_to_write()) {
+				FD_SET(connection_out, *writesetp);
+			}	
+		}
+		else {
+			tv.tv_sec = (next_write.tv_sec - now.tv_sec);
+			tv.tv_usec = (next_write.tv_usec - now.tv_usec);
+		}
 		tvp = &tv;
 	}
 
@@ -645,8 +694,9 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		snprintf(buf, sizeof buf, "select: %s\r\n", strerror(errno));
 		buffer_append(&stderr_buffer, buf, strlen(buf));
 		quit_pending = 1;
-	} else if (ret == 0)
-		server_alive_check();
+	}/* else if (ret == 0)
+		debug("#############################TIMEOUT");
+	//	server_alive_check();*/
 }
 
 static void
@@ -1456,6 +1506,18 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 		/* Check if we should immediately send eof on stdin. */
 		client_check_initial_eof_on_stdin();
 	}
+	
+	/* CSE 508 */
+
+	struct timeval last_real_data;
+	gettimeofday(&last_real_data, NULL);
+	//last_real_data.tv_sec = INT_MAX;
+	//last_real_data.tv_usec = INT_MAX;
+	next_write.tv_sec = INT_MIN;
+	next_write.tv_usec = INT_MIN;
+
+	u_int expired = 0;
+	/* END CSE 508 */
 
 	/* Main loop of the client for the interactive session mode. */
 	while (!quit_pending) {
@@ -1515,9 +1577,35 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 				need_rekeying = 0;
 			}
 		}
-
+		
 		/* Buffer input from the connection.  */
 		client_process_net_input(readset);
+		
+		// CSE 508
+		struct timeval now;
+
+		if(FD_ISSET(connection_in, readset)) {
+
+			gettimeofday(&now, NULL);
+
+			if(next_write.tv_sec == INT_MAX) {
+				srand(time(NULL));
+			//	next_write.tv_sec = now.tv_sec;
+			//	next_write.tv_usec = now.tv_usec + 2000;
+			
+			}
+			int *type;
+			u_char ty;
+		//	ty = packet_size_cse508();
+			
+//			if(ty != SSH2_MSG_IGNORE) {
+
+		//		last_real_data.tv_sec = now.tv_sec;
+			//	expired = 0;
+				debug("###################### WALALA ");
+//			}
+		}	
+		// END CSE 508
 
 		if (quit_pending)
 			break;
@@ -1531,7 +1619,6 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 			 */
 			client_process_output(writeset);
 		}
-
 		if (session_resumed) {
 			connection_in = packet_get_connection_in();
 			connection_out = packet_get_connection_out();
@@ -1544,8 +1631,24 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 		 * Send as much buffered packet data as possible to the
 		 * sender.
 		 */
-		if (FD_ISSET(connection_out, writeset))
-			packet_write_poll();
+		// CSE 508
+		if (FD_ISSET(connection_out, writeset)) {
+			gettimeofday(&now, NULL);
+			srand(time(NULL));
+			if(!expired || packet_have_data_to_write()) {
+				next_write.tv_sec = now.tv_sec;
+				next_write.tv_usec = now.tv_usec + 200;
+				packet_write_poll2();
+				expired = 0;
+				if(packet_have_data_to_write()) {
+					last_real_data.tv_sec = now.tv_sec;
+					last_real_data.tv_usec = now.tv_usec;
+				}	
+			}
+
+		//	last_real_data.tv_sec = now.tv_sec;
+		}
+		// END CSE 508
 
 		/*
 		 * If we are a backgrounded control master, and the
@@ -1558,6 +1661,14 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 				break;
 			}
 		}
+	// CSE 508 
+	
+	if((now.tv_usec - last_real_data.tv_usec) > 200)
+	{
+		next_write.tv_sec = INT_MAX;
+		expired = 1;
+	}
+		
 	}
 	if (readset)
 		xfree(readset);

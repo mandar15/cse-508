@@ -1724,6 +1724,11 @@ packet_write_poll2(void)
 	
 }
 
+u_char
+packet_size_cse508(void) {
+	int *seq;
+	return packet_read_poll2(seq);
+}
 /*
  * Calls packet_write_poll repeatedly until all pending output data has been
  * written.
