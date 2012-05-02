@@ -1639,6 +1639,7 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 				next_write.tv_sec = now.tv_sec;
 				next_write.tv_usec = now.tv_usec + 200;
 				packet_write_poll2();
+				debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PWP2 calles");
 				expired = 0;
 				if(packet_have_data_to_write()) {
 					last_real_data.tv_sec = now.tv_sec;
