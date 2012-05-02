@@ -86,7 +86,7 @@
 #endif
 
 #define PACKET_MAX_SIZE (256 * 1024)
-#define MAX_MSS 1200
+#define MAX_MSS 1200 
 
 struct packet_state {
 	u_int32_t seqnr;
@@ -1685,6 +1685,11 @@ packet_write_poll2(void)
 	int len = buffer_len(&active_state->output);
 	int cont;
 	u_int write_bytes = MAX_MSS;
+
+	// Disabling Nagles on output connection, for constant size packets.
+	// We can also pad till MSS (without the need to set TCP_NODELAY
+	
+	set_nodelay(active_state->connection_out);
 	
 	if (len >= 0) {
 		cont = 0;
@@ -1719,7 +1724,8 @@ packet_write_poll2(void)
 			fatal("Write connection closed");
 		
 		buffer_consume(&active_state->output, len);
-
+		
+	debug("########################################################### LEN %d", len);	
 	}
 	
 }
@@ -1744,7 +1750,10 @@ packet_write_wait(void)
 	setp = (fd_set *)xcalloc(howmany(active_state->connection_out + 1,
 	    NFDBITS), sizeof(fd_mask));
 	packet_write_poll();
+	debug("$$$$$$$$$$$$$$$$$ IKARAMBA ");
+
 	while (packet_have_data_to_write()) {
+		debug("###################BUT NEVER HERE");
 		memset(setp, 0, howmany(active_state->connection_out + 1,
 		    NFDBITS) * sizeof(fd_mask));
 		FD_SET(active_state->connection_out, setp);
@@ -1777,7 +1786,7 @@ packet_write_wait(void)
 			    "waiting to write", get_remote_ipaddr());
 			cleanup_exit(255);
 		}
-		packet_write_poll();
+		packet_write_poll2();
 	}
 	xfree(setp);
 }
