@@ -87,7 +87,7 @@
 
 #define PACKET_MAX_SIZE (256 * 1024)
 #define MAX_MSS 1200 
-
+#define MAX_MSS1 1100
 struct packet_state {
 	u_int32_t seqnr;
 	u_int32_t packets;
@@ -1659,7 +1659,10 @@ packet_write_poll(void)
 {
 	int len = buffer_len(&active_state->output);
 	int cont;
-
+	
+	set_nodelay(active_state->connection_out);
+	debug(" &&&&&&&&&&&&&&&&&&&&&&& INTHISPLACE");
+	
 	if (len > 0) {
 		cont = 0;
 		len = roaming_write(active_state->connection_out,
@@ -1684,7 +1687,17 @@ packet_write_poll2(void)
 {
 	int len = buffer_len(&active_state->output);
 	int cont;
-	u_int write_bytes = MAX_MSS;
+	u_int Max;
+
+	if(active_state->server_side)
+	{
+		Max = MAX_MSS;
+	}
+	else
+	{
+		Max = MAX_MSS1;
+	}
+	u_int write_bytes = Max;
 
 	// Disabling Nagles on output connection, for constant size packets.
 	// We can also pad till MSS (without the need to set TCP_NODELAY
@@ -1693,22 +1706,22 @@ packet_write_poll2(void)
 	
 	if (len >= 0) {
 		cont = 0;
-		if(len > MAX_MSS)
+		if(len > Max)
 		{ 
 			len = roaming_write(active_state->connection_out,
-		    		buffer_ptr(&active_state->output), MAX_MSS, &cont);
+		    		buffer_ptr(&active_state->output), Max, &cont);
 		}
 		else
 		{
 
-			if(MAX_MSS - len > 32)
+			if(Max - len > 32)
 			{
-				packet_send_ignore(MAX_MSS-len-32);
+				packet_send_ignore(Max-len-32);
 				packet_send();
 								
 			}
 			else
-				write_bytes = MAX_MSS-len;
+				write_bytes = Max-len;
 
 			len = roaming_write(active_state->connection_out,
 				buffer_ptr(&active_state->output), write_bytes, &cont);				
@@ -1729,6 +1742,7 @@ packet_write_poll2(void)
 	}
 	
 }
+
 
 u_char
 packet_size_cse508(void) {
