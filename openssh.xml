@@ -83,7 +83,7 @@
                 <manpage
                     title='sshd'
                     section='1M'
-                    manpath='/home/mandar/ssh-mod/man'/>
+                    manpath='/home/grub/school/ns/ssh2/man'/>
             </documentation>
         </template>
     </service>

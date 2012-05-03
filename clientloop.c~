@@ -636,23 +636,8 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 	}
 	else 
 	{
-		if(next_write.tv_sec == INT_MAX)
-		{
-		
-			if(packet_have_data_to_write()) {
-				FD_SET(connection_out, *writesetp);
-			
-			debug("NEVER REACHED %d", next_write.tv_sec);
-			}
-			timeout_secs = 0;
-		}
-		else	
-		{
-			FD_CLR(connection_out, *writesetp);
-			timeout_secs = 0;
-			debug("&*&*&*&*&*&*&*&*&*&*&");
-		}		
-	//	timeout_secs = (next_write.tv_sec == INT_MAX) ? INT_MAX : 0;
+		FD_CLR(connection_out, *writesetp);
+		timeout_secs = (next_write.tv_sec == INT_MAX) ? INT_MAX : 0;
 	}
 	
 	if (timeout_secs == INT_MAX)
@@ -661,18 +646,8 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		// CSE 508
 		//tv.tv_sec = timeout_secs;
 		//tv.tv_usec = 0;
-		if(next_write.tv_sec == INT_MAX)
-		{
-			tv.tv_sec = 0;
-			tv.tv_usec = 0;
-			if(packet_have_data_to_write()) {
-				FD_SET(connection_out, *writesetp);
-			}	
-		}
-		else {
-			tv.tv_sec = (next_write.tv_sec - now.tv_sec);
-			tv.tv_usec = (next_write.tv_usec - now.tv_usec);
-		}
+		tv.tv_sec = (next_write.tv_sec - now.tv_sec);
+		tv.tv_usec = (next_write.tv_usec - now.tv_usec);
 		tvp = &tv;
 	}
 
@@ -694,9 +669,8 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		snprintf(buf, sizeof buf, "select: %s\r\n", strerror(errno));
 		buffer_append(&stderr_buffer, buf, strlen(buf));
 		quit_pending = 1;
-	}/* else if (ret == 0)
-		debug("#############################TIMEOUT");
-	//	server_alive_check();*/
+	} else if (ret == 0)
+		server_alive_check();
 }
 
 static void
@@ -1516,7 +1490,6 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 	next_write.tv_sec = INT_MIN;
 	next_write.tv_usec = INT_MIN;
 
-	u_int expired = 0;
 	/* END CSE 508 */
 
 	/* Main loop of the client for the interactive session mode. */
@@ -1590,21 +1563,15 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 
 			if(next_write.tv_sec == INT_MAX) {
 				srand(time(NULL));
-			//	next_write.tv_sec = now.tv_sec;
-			//	next_write.tv_usec = now.tv_usec + 2000;
+				next_write.tv_sec = now.tv_sec;
+				next_write.tv_usec = now.tv_usec + 20000;
 			
+			debug(" &&&&&&&&& LOLOLOL &&&&&&&&");
 			}
-			int *type;
-			u_char ty;
-		//	ty = packet_size_cse508();
-			
-//			if(ty != SSH2_MSG_IGNORE) {
-
-		//		last_real_data.tv_sec = now.tv_sec;
-			//	expired = 0;
-//			}
+			last_real_data.tv_sec = now.tv_sec;
 		}	
 		// END CSE 508
+		debug("&&&&&&&&&&&&&&&& :  LEN %d", packet_size_cse508());
 
 		if (quit_pending)
 			break;
@@ -1634,19 +1601,11 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 		if (FD_ISSET(connection_out, writeset)) {
 			gettimeofday(&now, NULL);
 			srand(time(NULL));
-			if(!expired || packet_have_data_to_write()) {
-				next_write.tv_sec = now.tv_sec;
-				next_write.tv_usec = now.tv_usec + (rand()%80000) + 1;
-				packet_write_poll2();
-				debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PWP2 calles");
-				expired = 0;
-				if(packet_have_data_to_write()) {
-					debug("############## MORE PACKETS TO WRITE");
-					last_real_data.tv_sec = now.tv_sec;
-					last_real_data.tv_usec = now.tv_usec;
-				}	
-			}
 
+				next_write.tv_sec = now.tv_sec;
+				next_write.tv_usec = now.tv_usec + 20000;
+
+			packet_write_poll2();
 		//	last_real_data.tv_sec = now.tv_sec;
 		}
 		// END CSE 508
@@ -1664,10 +1623,9 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 		}
 	// CSE 508 
 	
-	if((now.tv_usec - last_real_data.tv_usec) > 200)
+	if((now.tv_usec - last_real_data.tv_usec) > 2)
 	{
 		next_write.tv_sec = INT_MAX;
-		expired = 1;
 	}
 		
 	}

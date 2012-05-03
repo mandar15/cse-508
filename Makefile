@@ -5,7 +5,7 @@
 
 AUTORECONF=autoreconf
 
-prefix=/home/mandar/ssh-mod
+prefix=/home/grub/school/ns/ssh2
 exec_prefix=${prefix}
 bindir=${exec_prefix}/bin
 sbindir=${exec_prefix}/sbin
@@ -115,7 +115,7 @@ PATHSUBS	= \
 	-e 's|/etc/ssh/sshrc|$(sysconfdir)/sshrc|g' \
 	-e 's|/usr/X11R6/bin/xauth|$(XAUTH_PATH)|g' \
 	-e 's|/var/empty|$(PRIVSEP_PATH)|g' \
-	-e 's|/usr/bin:/bin:/usr/sbin:/sbin|/usr/bin:/bin:/usr/sbin:/sbin:/home/mandar/ssh-mod/bin|g'
+	-e 's|/usr/bin:/bin:/usr/sbin:/sbin|/usr/bin:/bin:/usr/sbin:/sbin:/home/grub/school/ns/ssh2/bin|g'
 
 FIXPATHSCMD	= $(SED) $(PATHSUBS)
 

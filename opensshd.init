@@ -8,7 +8,7 @@ umask 022
 CAT=/bin/cat
 KILL=/bin/kill
 
-prefix=/home/mandar/ssh-mod
+prefix=/home/grub/school/ns/ssh2
 sysconfdir=${prefix}/etc
 piddir=/var/run
 

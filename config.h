@@ -1431,7 +1431,7 @@
 /* #undef UNIXWARE_LONG_PASSWORDS */
 
 /* Specify default $PATH */
-#define USER_PATH "/usr/bin:/bin:/usr/sbin:/sbin:/home/mandar/ssh-mod/bin"
+#define USER_PATH "/usr/bin:/bin:/usr/sbin:/sbin:/home/grub/school/ns/ssh2/bin"
 
 /* Define this if you want to use libkafs' AFS support */
 /* #undef USE_AFS */
