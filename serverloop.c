@@ -937,7 +937,7 @@ server_loop2(Authctxt *authctxt)
 			if(next_write.tv_sec == INT_MAX) {
 				srand(time(NULL));
 				next_write.tv_sec =  now.tv_sec;
-				next_write.tv_usec = now.tv_usec + 2000;
+				next_write.tv_usec = now.tv_usec + (rand()%20000) + 1;
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
@@ -959,7 +959,7 @@ server_loop2(Authctxt *authctxt)
 
 			srand(time(NULL));
 			next_write.tv_sec = now.tv_sec;
-			next_write.tv_usec =  now.tv_usec + 2000;
+			next_write.tv_usec =  now.tv_usec + (rand()%20000) + 1;
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 
