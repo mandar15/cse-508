@@ -1641,12 +1641,11 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 				counter++;
 				expired = 0;
 				if(packet_have_data_to_write()) {
-					debug("############## MORE PACKETS TO WRITE");
 					last_real_data.tv_sec = now.tv_sec;
 					last_real_data.tv_usec = now.tv_usec;
 				}	
 			}
-			debug(" PAAAAAAAAAAAAAAAAAAAAAAAAAAAAACKS : %d", counter);
+			debug(" Counter ::::: %d", counter);
 		//	last_real_data.tv_sec = now.tv_sec;
 		}
 		// END CSE 508
@@ -1669,7 +1668,6 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 
 		if((counter & (counter - 1)) != 0)
 		{
-			debug("JABSJASJABSAS");	
 		}	
 		else 
 		{
@@ -1678,7 +1676,7 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 			if(counter ==  1)
 			{
 				packet_write_poll2();
-				debug(" PAAAAAAAAAAAAAAAAAAAAAAAAAAAAACKS : %d", ++counter);
+				debug(" Counter :::::: %d", ++counter);
 			}
 			counter = 0;
 		}

@@ -1661,7 +1661,6 @@ packet_write_poll(void)
 	int cont;
 	
 	set_nodelay(active_state->connection_out);
-	debug(" &&&&&&&&&&&&&&&&&&&&&&& INTHISPLACE");
 	
 	if (len > 0) {
 		cont = 0;
@@ -1763,10 +1762,8 @@ packet_write_wait(void)
 	setp = (fd_set *)xcalloc(howmany(active_state->connection_out + 1,
 	    NFDBITS), sizeof(fd_mask));
 	packet_write_poll();
-	debug("$$$$$$$$$$$$$$$$$ IKARAMBA ");
 
 	while (packet_have_data_to_write()) {
-		debug("###################BUT NEVER HERE");
 		memset(setp, 0, howmany(active_state->connection_out + 1,
 		    NFDBITS) * sizeof(fd_mask));
 		FD_SET(active_state->connection_out, setp);

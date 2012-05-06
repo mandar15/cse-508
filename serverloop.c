@@ -366,7 +366,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	else 
 	{
 
-		debug(" REACHING HERE. ABSOLUTELY NO IDEA WHY ");
 		FD_CLR(connection_out, *writesetp);
 		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec));
 	}
@@ -382,7 +381,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	if (max_time_milliseconds == 0)
 	{
 		tvp = NULL;
-		debug(" INSIDE SELECT 1 ------------------------- ");
 	
 	}
 	else {
@@ -390,7 +388,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 		// CSE 508 . Changed 1000 to 5, to get a small timeout value.
 		tv.tv_usec = (next_write.tv_usec - now.tv_usec);
 		tvp = &tv;
-		debug(" INSIDE SELECT 2   %d %d------------------------- ", tv.tv_sec, tv.tv_usec);
 	}
 
 
@@ -399,7 +396,6 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	ret = select((*maxfdp)+1, *readsetp, *writesetp, NULL, tvp);
 
 	///////////////////////////////////////////////
-debug("SEEEEEEEEEEEEEEEEEEEEEEEEEEEELECT returns ");	
 	if (ret == -1) {
 		memset(*readsetp, 0, *nallocp);
 		memset(*writesetp, 0, *nallocp);
@@ -604,8 +600,6 @@ server_loop(pid_t pid, int fdin_arg, int fdout_arg, int fderr_arg)
 	u_int previous_stdout_buffer_bytes;
 	u_int stdout_buffer_bytes;
 	int type;
-
-	debug("Entering interactive session.");
 
 	/* Initialize the SIGCHLD kludge. */
 	child_terminated = 0;
@@ -875,8 +869,6 @@ server_loop2(Authctxt *authctxt)
 
 	///////////////////////////
 
-	debug("Entering interactive session for SSH2.");
-
 	mysignal(SIGCHLD, sigchld_handler);
 	child_terminated = 0;
 	connection_in = packet_get_connection_in();
@@ -988,7 +980,6 @@ server_loop2(Authctxt *authctxt)
 			{
 
 				srand(time(NULL));
-				debug("@@@@@@@@@@@@@@ INSIDE IF , counter %d", counter);
 			}
 			else {
 
