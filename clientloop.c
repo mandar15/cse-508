@@ -650,7 +650,6 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 		{
 			FD_CLR(connection_out, *writesetp);
 			timeout_secs = 0;
-			debug("&*&*&*&*&*&*&*&*&*&*&");
 		}		
 	//	timeout_secs = (next_write.tv_sec == INT_MAX) ? INT_MAX : 0;
 	}
@@ -1516,6 +1515,7 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 	next_write.tv_sec = INT_MIN;
 	next_write.tv_usec = INT_MIN;
 
+	u_int counter = 0;
 	u_int expired = 0;
 	/* END CSE 508 */
 
@@ -1638,7 +1638,7 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 				next_write.tv_sec = now.tv_sec;
 				next_write.tv_usec = now.tv_usec + (rand()%80000) + 1;
 				packet_write_poll2();
-				debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~PWP2 calles");
+				counter++;
 				expired = 0;
 				if(packet_have_data_to_write()) {
 					debug("############## MORE PACKETS TO WRITE");
@@ -1646,7 +1646,7 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 					last_real_data.tv_usec = now.tv_usec;
 				}	
 			}
-
+			debug(" PAAAAAAAAAAAAAAAAAAAAAAAAAAAAACKS : %d", counter);
 		//	last_real_data.tv_sec = now.tv_sec;
 		}
 		// END CSE 508
@@ -1666,8 +1666,15 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 	
 	if((now.tv_usec - last_real_data.tv_usec) > 200)
 	{
-		next_write.tv_sec = INT_MAX;
-		expired = 1;
+
+		if((counter & (counter - 1)) != 0)
+		{
+			debug("JABSJASJABSAS");	
+		}	
+		else {
+			next_write.tv_sec = INT_MAX;
+			expired = 1;
+		}
 	}
 		
 	}
