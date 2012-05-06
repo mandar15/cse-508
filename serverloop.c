@@ -365,6 +365,8 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	}
 	else 
 	{
+
+		debug(" REACHING HERE. ABSOLUTELY NO IDEA WHY ");
 		FD_CLR(connection_out, *writesetp);
 		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec));
 	}
@@ -378,12 +380,17 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 			max_time_milliseconds = 100;
 
 	if (max_time_milliseconds == 0)
+	{
 		tvp = NULL;
+		debug(" INSIDE SELECT 1 ------------------------- ");
+	
+	}
 	else {
 		tv.tv_sec = (next_write.tv_sec - now.tv_sec);
 		// CSE 508 . Changed 1000 to 5, to get a small timeout value.
 		tv.tv_usec = (next_write.tv_usec - now.tv_usec);
 		tvp = &tv;
+		debug(" INSIDE SELECT 2   %d %d------------------------- ", tv.tv_sec, tv.tv_usec);
 	}
 
 
@@ -392,7 +399,7 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 	ret = select((*maxfdp)+1, *readsetp, *writesetp, NULL, tvp);
 
 	///////////////////////////////////////////////
-
+debug("SEEEEEEEEEEEEEEEEEEEEEEEEEEEELECT returns ");	
 	if (ret == -1) {
 		memset(*readsetp, 0, *nallocp);
 		memset(*writesetp, 0, *nallocp);
@@ -893,6 +900,8 @@ server_loop2(Authctxt *authctxt)
 	last_real_data.tv_usec = INT_MAX;
 	next_write.tv_sec = INT_MAX;
 	next_write.tv_usec = INT_MAX;
+	
+	u_int counter = 0;
 
 	for (;;) {
 
@@ -938,14 +947,15 @@ server_loop2(Authctxt *authctxt)
 				srand(time(NULL));
 				next_write.tv_sec =  now.tv_sec;
 				next_write.tv_usec = now.tv_usec + (rand()%20000) + 1;
+				counter = 0;
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
-			u_char type;
-			if((type = packet_size_cse508()) != SSH2_MSG_IGNORE) {
+		//	u_char type;
+		//	if((type = packet_size_cse508()) != SSH2_MSG_IGNORE) {
 				last_real_data.tv_sec = now.tv_sec;
-				debug("$$$$$$$$$$ INSIDE LAST $");
-			}
+		//		debug("$$$$$$$$$$ INSIDE LAST $");
+		//	}
 			}
 
 		process_input(readset);
@@ -964,14 +974,27 @@ server_loop2(Authctxt *authctxt)
 			// data written to the connection.
 
 			//last_real_data.tv_sec = now.tv_sec;
-
+			counter++;
+			debug("================> COUNTER: %d", counter);
 		}
 
 			process_output(writeset);
 
 		if((now.tv_sec - last_real_data.tv_sec) > 2)
 		{
-			next_write.tv_sec = INT_MAX;
+		
+			//checking for power of 2. 
+			if((counter & (counter - 1)) != 0 )
+			{
+
+				srand(time(NULL));
+				debug("@@@@@@@@@@@@@@ INSIDE IF , counter %d", counter);
+			}
+			else {
+
+				next_write.tv_sec = INT_MAX;
+				debug("===================>  The value of counter is %u", counter);
+			}
 		}
 	}
 
