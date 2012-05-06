@@ -1398,7 +1398,7 @@ packet_read_poll_seqnr(u_int32_t *seqnr_p)
 			}
 			switch (type) {
 			case SSH2_MSG_IGNORE:
-				debug3("Received SSH2_MSG_IGNORE");
+				//debug3("Received SSH2_MSG_IGNORE");
 				break;
 			case SSH2_MSG_DEBUG:
 				packet_get_char();

@@ -1664,16 +1664,23 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 		}
 	// CSE 508 
 	
-	if((now.tv_usec - last_real_data.tv_usec) > 200)
+	if((now.tv_usec - last_real_data.tv_usec) > 2000)
 	{
 
 		if((counter & (counter - 1)) != 0)
 		{
 			debug("JABSJASJABSAS");	
 		}	
-		else {
+		else 
+		{
 			next_write.tv_sec = INT_MAX;
 			expired = 1;
+			if(counter ==  1)
+			{
+				packet_write_poll2();
+				debug(" PAAAAAAAAAAAAAAAAAAAAAAAAAAAAACKS : %d", ++counter);
+			}
+			counter = 0;
 		}
 	}
 		
