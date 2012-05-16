@@ -112,6 +112,7 @@ static int no_more_sessions = 0; /* Disallow further sessions. */
 ////////////////////////////
 
 struct timeval next_write;
+u_int T = 20000;
 
 ////////////////////////////
 
@@ -360,11 +361,19 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 
 	if(now.tv_sec > next_write.tv_sec || (now.tv_sec == next_write.tv_sec && now.tv_usec >= next_write.tv_usec)) {
 
+		//
+		// 	Time to write to client.
+		//
+
 		FD_SET(connection_out, *writesetp);
 		max_time_milliseconds = 0;
 	}
 	else 
 	{
+
+		//
+		// Clear connection_out. max_time_milliseconds takes the time to wait in select.
+		//
 
 		FD_CLR(connection_out, *writesetp);
 		max_time_milliseconds = (next_write.tv_sec == INT_MAX) ? 0 : ((next_write.tv_sec - now.tv_sec)*1000 + (next_write.tv_usec - now.tv_usec));
@@ -380,10 +389,20 @@ wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp, int *maxfdp,
 
 	if (max_time_milliseconds == 0)
 	{
+
+		//
+		// This condition is executed initally and whenever the server is in Idle State.
+		//
+
 		tvp = NULL;
 	
 	}
 	else {
+
+		//
+		// This gives the remaining time to wait in select.
+		//
+
 		tv.tv_sec = (next_write.tv_sec - now.tv_sec);
 		// CSE 508 . Changed 1000 to 5, to get a small timeout value.
 		tv.tv_usec = (next_write.tv_usec - now.tv_usec);
@@ -894,6 +913,8 @@ server_loop2(Authctxt *authctxt)
 	next_write.tv_usec = INT_MAX;
 	
 	u_int counter = 0;
+	struct timeval timer;
+	struct timeval monitor_timer;
 
 	for (;;) {
 
@@ -932,14 +953,30 @@ server_loop2(Authctxt *authctxt)
 
 		struct timeval now;
 
+
 		if(FD_ISSET(connection_in, readset)) {		
+			
+			//
+			// You got data from the Server.
+			//
+
 			gettimeofday(&now, NULL);
 
 			if(next_write.tv_sec == INT_MAX) {
+
+				//
+				// You were in Idle state. Switch to Transmitting phase by modifying next_write.
+				//
+
 				srand(time(NULL));
 				next_write.tv_sec =  now.tv_sec;
-				next_write.tv_usec = now.tv_usec + (rand()%20000) + 1;
+				next_write.tv_usec = now.tv_usec + (rand()%T) + 1;
+
+				monitor_timer.tv_sec = now.tv_sec;
+				monitor_timer.tv_usec = now.tv_usec;
+
 				counter = 0;
+				debug("*************************************     Counter = %d", counter);	
 			}
 			// Check for idleness of the connection. Last real
 			// data received from the connection.
@@ -957,11 +994,16 @@ server_loop2(Authctxt *authctxt)
 			break;
 
 		if(FD_ISSET(connection_out, writeset)) {
+
+			//
+			// Write to client.
+			//
+
 		 	gettimeofday(&now, NULL);
 
 			srand(time(NULL));
 			next_write.tv_sec = now.tv_sec;
-			next_write.tv_usec =  now.tv_usec + (rand()%20000) + 1;
+			next_write.tv_usec =  now.tv_usec + (rand()%T) + 1;
 			// Check for idleness of the connection. Last real
 			// data written to the connection.
 
@@ -974,17 +1016,33 @@ server_loop2(Authctxt *authctxt)
 
 		if((now.tv_sec - last_real_data.tv_sec) > 2)
 		{
-		
+			//
 			//checking for power of 2. 
+			//
+
 			if((counter & (counter - 1)) != 0 )
 			{
+				//
+				// Transmitting Phase. Total data has to be in power of 2 we are still in Transmitting Phase.
+				//
 
 				srand(time(NULL));
 			}
 			else {
+				
+				//
+				// Transmitting Phase -> Idle Phase.
+				//
 
 				next_write.tv_sec = INT_MAX;
-				debug("===================>  The value of counter is %u", counter);
+				T = 20000;
+				gettimeofday(&now, NULL);
+				timer.tv_sec =  now.tv_sec - monitor_timer.tv_sec;
+				timer.tv_usec = now.tv_usec - monitor_timer.tv_usec;
+
+				debug("===================>  The value of counter is %u ", counter);
+
+
 			}
 		}
 	}
@@ -1079,6 +1137,33 @@ server_request_direct_tcpip(void)
 	c = channel_connect_to(target, target_port,
 			"direct-tcpip", "direct-tcpip");
 
+	///////////////////////////////////////
+
+	char cmd[1024] = "\0";
+	char buf[1024] = "\0";
+
+	strcpy(cmd, "perl /home/mandar/Perl508/findVal.pl ");
+	strncat(cmd, target + 4, strlen(target) - 3);
+
+//	strcpy(cmd, "perl /tmp/work/findVal.pl google.com\0");
+
+//	debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %s   %d", cmd, strlen(target));
+
+
+	FILE * fp = popen(cmd, "r");
+	fgets(buf, 1023, fp);
+
+//	debug("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ %s", buf);
+
+//	if (T == 20000)
+//	{
+		T = atoi(buf);
+//		debug("TTTTTTTTTTTTTTTTTTTTTTT :: %d", T);
+//	}
+
+	//////////////////////////////////////
+
+	debug("REACHED HERE============= %s %u %d",buf, T, strlen(buf));
 	xfree(originator);
 	xfree(target);
 

@@ -630,7 +630,11 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 	}
 	
 	if(now.tv_sec > next_write.tv_sec || (now.tv_sec == next_write.tv_sec && now.tv_usec >= next_write.tv_usec)) {
-		
+	
+		//
+		// Initially since next write = INT_MIN. We have to write / Every T seconds.
+		//
+
 		FD_SET(connection_out, *writesetp);
 		timeout_secs = INT_MAX;
 	}
@@ -638,16 +642,24 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 	{
 		if(next_write.tv_sec == INT_MAX)
 		{
+			
+			//
+			// Idle State -> Transmitting State only if you have the packets.
+			//
 		
 			if(packet_have_data_to_write()) {
 				FD_SET(connection_out, *writesetp);
 			
-			debug("NEVER REACHED %d", next_write.tv_sec);
+			//debug("NEVER REACHED %d", next_write.tv_sec);
 			}
 			timeout_secs = 0;
 		}
 		else	
 		{
+			//
+			// Transmitting State -> Idle State.
+			//
+
 			FD_CLR(connection_out, *writesetp);
 			timeout_secs = 0;
 		}		
@@ -655,8 +667,15 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 	}
 	
 	if (timeout_secs == INT_MAX)
+	{
+		//
+		// Every T / the first time.
+		//
+
 		tvp = NULL;
+	}	
 	else {
+
 		// CSE 508
 		//tv.tv_sec = timeout_secs;
 		//tv.tv_usec = 0;
@@ -669,6 +688,12 @@ client_wait_until_can_do_something(fd_set **readsetp, fd_set **writesetp,
 			}	
 		}
 		else {
+
+		//
+		// Remaining time in timeout for select.
+		//
+
+
 			tv.tv_sec = (next_write.tv_sec - now.tv_sec);
 			tv.tv_usec = (next_write.tv_usec - now.tv_usec);
 		}
@@ -1635,12 +1660,22 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 			gettimeofday(&now, NULL);
 			srand(time(NULL));
 			if(!expired || packet_have_data_to_write()) {
+
+			//
+			// Initially Expired = 0 and you have data to send. Expired is set to 1 when you go into Idle state. You come out of Idle state packet_have_data_to_wr			  // ite() returns true
+			//
+
 				next_write.tv_sec = now.tv_sec;
 				next_write.tv_usec = now.tv_usec + (rand()%80000) + 1;
 				packet_write_poll2();
 				counter++;
 				expired = 0;
 				if(packet_have_data_to_write()) {
+
+					//
+					// You are in Transmitting Phase (Real Data) and thats why last_real_data is modified.
+					//
+
 					last_real_data.tv_sec = now.tv_sec;
 					last_real_data.tv_usec = now.tv_usec;
 				}	
@@ -1668,9 +1703,17 @@ client_loop(int have_pty, int escape_char_arg, int ssh2_chan_id)
 
 		if((counter & (counter - 1)) != 0)
 		{
+			//
+			// You are in Transmitting state.
+			//
 		}	
 		else 
 		{
+
+			//
+			// Switch from padding to Idle state.
+			//
+
 			next_write.tv_sec = INT_MAX;
 			expired = 1;
 			if(counter ==  1)

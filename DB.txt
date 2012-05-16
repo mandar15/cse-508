@@ -1,0 +1,10 @@
+google.com 7.008503
+facebook.com 6.518104
+youtube.com 6.742065
+yahoo.com 6.84221
+baidu.com 3.057041
+wikipedia.org -1000
+live.com 5.39462
+twitter.com 0.0387810000000002
+qq.com 59.729568
+amazon.com 1.032306

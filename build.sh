@@ -2,4 +2,4 @@
 make
 make install
 sudo killall sshd
-sudo /home/grub/school/ns/ssh2/sbin/sshd
+sudo /home/mandar/ssh-mod/sbin/sshd

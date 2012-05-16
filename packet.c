@@ -1701,12 +1701,12 @@ packet_write_poll2(void)
 	// Disabling Nagles on output connection, for constant size packets.
 	// We can also pad till MSS (without the need to set TCP_NODELAY
 	
-	set_nodelay(active_state->connection_out);
+	//set_nodelay(active_state->connection_out);
 	
 	if (len >= 0) {
 		cont = 0;
 		if(len >= Max)
-		{ 
+		{
 			len = roaming_write(active_state->connection_out,
 		    		buffer_ptr(&active_state->output), Max, &cont);
 		}
